@@ -2,7 +2,7 @@ FROM node:22.0 AS build
 ARG SITE_DOMAIN
 WORKDIR /app
 COPY package*.json ./
-RUN npm i
+RUN npm ci
 COPY . .
 RUN npm run build
 
