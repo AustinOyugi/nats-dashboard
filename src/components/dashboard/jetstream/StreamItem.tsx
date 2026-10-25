@@ -1,8 +1,12 @@
 import { For, Show } from 'solid-js';
+import StreamPending from './StreamPending';
 
 import type { FormattedStreamDetail } from '~/lib/format';
 import { ListItem } from '~/components/dashboard/StackedList';
-import Badge, { greenIfPositive, redIfPositive } from '~/components/Badge';
+import Badge, {
+  greenIfPositive,
+  redIfPositive,
+} from '~/components/Badge';
 import { ChevronRightIcon } from '~/components/icons';
 
 const streamColor = {
@@ -16,6 +20,8 @@ const streamColor = {
 interface StreamItemProps {
   stream: FormattedStreamDetail;
   onClick: (name: string) => void;
+  pendingExpanded: boolean;
+  onPendingExpandedChange: (name: string, open: boolean) => void;
 }
 
 export default function StreamItem(props: StreamItemProps) {
@@ -57,10 +63,12 @@ export default function StreamItem(props: StreamItemProps) {
                 </li>
               )}
             </For>
-            <Show when={(props.stream.config?.subjects?.length ?? 0) > 3}>
+            <Show
+              when={(props.stream.config?.subjects?.length ?? 0) > 3}
+            >
               <li class="text-gray-500 dark:text-gray-400">
-                +{(props.stream.config?.subjects?.length ?? 0) - 3} more in
-                stream details
+                +{(props.stream.config?.subjects?.length ?? 0) - 3} more
+                in stream details
               </li>
             </Show>
           </ul>
@@ -69,7 +77,9 @@ export default function StreamItem(props: StreamItemProps) {
         <div class="mt-3 flex flex-col sm:flex-row flex-wrap sm:items-center gap-2 sm:gap-3 text-xs leading-5 text-gray-500 dark:text-gray-400">
           <Badge
             border={false}
-            color={greenIfPositive(props.stream.info.state.consumerCount)}
+            color={greenIfPositive(
+              props.stream.info.state.consumerCount
+            )}
             class="flex items-center justify-between gap-x-1.5"
           >
             <span class="text-gray-900 dark:text-white">Consumers</span>
@@ -78,11 +88,16 @@ export default function StreamItem(props: StreamItemProps) {
 
           <Badge
             border={false}
-            color={greenIfPositive(props.stream.info.state.numSubjects.num)}
+            color={greenIfPositive(
+              props.stream.info.state.numSubjects.num
+            )}
             class="flex items-center justify-between gap-x-1.5"
           >
             <span class="text-gray-900 dark:text-white">
-              <Show when={props.stream.info.isKVStore} fallback="Subjects">
+              <Show
+                when={props.stream.info.isKVStore}
+                fallback="Subjects"
+              >
                 Keys (Subjects)
               </Show>
             </span>
@@ -91,11 +106,16 @@ export default function StreamItem(props: StreamItemProps) {
 
           <Badge
             border={false}
-            color={greenIfPositive(props.stream.info.state.messages.num)}
+            color={greenIfPositive(
+              props.stream.info.state.messages.num
+            )}
             class="flex items-center justify-between gap-x-1.5"
           >
             <span class="text-gray-900 dark:text-white">
-              <Show when={props.stream.info.isKVStore} fallback="Messages">
+              <Show
+                when={props.stream.info.isKVStore}
+                fallback="Messages"
+              >
                 Revisions (Msgs)
               </Show>
             </span>
@@ -113,7 +133,9 @@ export default function StreamItem(props: StreamItemProps) {
 
           <Badge
             border={false}
-            color={redIfPositive(props.stream.info.state.numDeleted.num)}
+            color={redIfPositive(
+              props.stream.info.state.numDeleted.num
+            )}
             class="flex items-center justify-between gap-x-1.5"
           >
             <span class="text-gray-900 dark:text-white">Deleted</span>
@@ -130,6 +152,14 @@ export default function StreamItem(props: StreamItemProps) {
           </Badge>
         </div>
 
+        <StreamPending
+          stream={props.stream}
+          expanded={props.pendingExpanded}
+          onExpandedChange={(open) =>
+            props.onPendingExpandedChange(props.stream.name, open)
+          }
+        />
+
         <Show when={props.stream.info.state.messages.num > 0}>
           <div class="mt-3 flex flex-col sm:flex-row flex-wrap sm:items-center gap-2 sm:gap-3 text-xs leading-5 text-gray-500 dark:text-gray-400">
             <Badge
@@ -137,7 +167,9 @@ export default function StreamItem(props: StreamItemProps) {
               color="gray"
               class="flex items-center justify-between gap-x-1.5"
             >
-              <span class="text-gray-900 dark:text-white">First Seq.</span>
+              <span class="text-gray-900 dark:text-white">
+                First Seq.
+              </span>
               {props.stream.info.state.firstSeq}
             </Badge>
 
@@ -146,7 +178,9 @@ export default function StreamItem(props: StreamItemProps) {
               color="gray"
               class="flex items-center justify-between gap-x-1.5"
             >
-              <span class="text-gray-900 dark:text-white">Last Seq.</span>
+              <span class="text-gray-900 dark:text-white">
+                Last Seq.
+              </span>
               {props.stream.info.state.lastSeq}
             </Badge>
 
@@ -155,7 +189,9 @@ export default function StreamItem(props: StreamItemProps) {
               color="gray"
               class="flex items-center justify-between gap-x-1.5"
             >
-              <span class="text-gray-900 dark:text-white">First TS</span>
+              <span class="text-gray-900 dark:text-white">
+                First TS
+              </span>
               {props.stream.info.state.firstTS}
             </Badge>
 

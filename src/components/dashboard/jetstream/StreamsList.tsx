@@ -1,5 +1,8 @@
 import { createMemo, createSignal, For, Show } from 'solid-js';
 
+import { useStore } from '~/components/context/store';
+import { useJsz } from '~/components/dashboard/queries';
+import Button from '~/components/Button';
 import { useSettings } from '~/components/context/settings';
 import type { StreamDetail } from '~/types';
 import { formatStream } from '~/lib/format';
@@ -42,22 +45,45 @@ interface Props {
 
 export default function StreamsList(props: Props) {
   const [settings, actions] = useSettings();
+  const [store] = useStore();
+  const jsz = useJsz(() => settings.jsz.query);
 
   const streams = createMemo(() =>
     (props.streams.slice().sort(byCreationTime) ?? []).map(formatStream)
   );
 
+  // Keep expansion by stream name because monitoring polling replaces stream objects.
+  const [expandedPending, setExpandedPending] = createSignal<
+    Set<string>
+  >(new Set());
+  const setPendingExpanded = (name: string, open: boolean) =>
+    setExpandedPending((previous) => {
+      if (previous.has(name) === open) return previous;
+      const next = new Set(previous);
+      if (open) next.add(name);
+      else next.delete(name);
+      return next;
+    });
+
   const [search, setSearch] = createSignal('');
-  const filteredStreams = createMemo(() => filterStreams(streams(), search()));
+  const filteredStreams = createMemo(() =>
+    filterStreams(streams(), search())
+  );
   const [requestedPage, setCurrentPage] = createSignal(1);
 
   const totalPages = createMemo(() =>
-    Math.max(1, Math.ceil(filteredStreams().length / settings.jsz.pageSize))
+    Math.max(
+      1,
+      Math.ceil(filteredStreams().length / settings.jsz.pageSize)
+    )
   );
   // Polling and page-size changes can remove the current page.
-  const currentPage = createMemo(() => Math.min(requestedPage(), totalPages()));
+  const currentPage = createMemo(() =>
+    Math.min(requestedPage(), totalPages())
+  );
 
-  const next = () => setCurrentPage(Math.min(currentPage() + 1, totalPages()));
+  const next = () =>
+    setCurrentPage(Math.min(currentPage() + 1, totalPages()));
   const prev = () => setCurrentPage(Math.max(currentPage() - 1, 1));
 
   const isFirstPage = () => currentPage() === 1;
@@ -74,7 +100,8 @@ export default function StreamsList(props: Props) {
 
   const numStreams = () => {
     const total = streams().length;
-    if (search().trim()) return `${filteredStreams().length} of ${total}`;
+    if (search().trim())
+      return `${filteredStreams().length} of ${total}`;
     const current = pageStreams().length;
 
     if (total > 0 && total !== current) {
@@ -168,6 +195,25 @@ export default function StreamsList(props: Props) {
           </p>
         </div>
 
+        <Show when={!settings.jsz.query.consumers}>
+          <div class="border-b border-gray-200 dark:border-white/5 px-4 py-4 sm:px-6 lg:px-8 space-y-3">
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+              Enable consumer details to see pending deliveries and
+              delayed retries across streams.
+            </p>
+            <Button
+              color="secondary"
+              size="md"
+              onClick={() => {
+                actions.setJszConsumers(true);
+                if (!store.active) jsz.refetch();
+              }}
+            >
+              Fetch Consumers
+            </Button>
+          </div>
+        </Show>
+
         <StackedList>
           <For
             each={pageStreams()}
@@ -180,7 +226,12 @@ export default function StreamsList(props: Props) {
             }
           >
             {(stream) => (
-              <StreamItem stream={stream} onClick={setSelectedName} />
+              <StreamItem
+                stream={stream}
+                onClick={setSelectedName}
+                pendingExpanded={expandedPending().has(stream.name)}
+                onPendingExpandedChange={setPendingExpanded}
+              />
             )}
           </For>
         </StackedList>

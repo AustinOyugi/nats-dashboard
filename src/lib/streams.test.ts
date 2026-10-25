@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { filterStreams } from './streams';
+import { filterStreams, pendingDeliveries } from './streams';
 import { paginate } from './pagination';
 
 const streams = [
@@ -18,7 +18,9 @@ describe('filterStreams', () => {
   });
 
   test('matches any configured subject, ignoring case and surrounding whitespace', () => {
-    expect(filterStreams(streams, '  PROD.PAYMENTS  ')).toEqual([streams[1]]);
+    expect(filterStreams(streams, '  PROD.PAYMENTS  ')).toEqual([
+      streams[1],
+    ]);
   });
 
   test('preserves all streams for an empty search', () => {
@@ -44,5 +46,67 @@ describe('filterStreams', () => {
       'KV_INBOX',
       'MIRROR',
     ]);
+  });
+});
+
+describe('pendingDeliveries', () => {
+  test('sums consumer deliveries independently of retained messages', () => {
+    expect(
+      pendingDeliveries({
+        state: { consumer_count: 2 },
+        consumer_detail: [
+          { num_pending: 3, num_ack_pending: 1 },
+          { num_pending: 3, num_ack_pending: 2 },
+        ],
+      })
+    ).toEqual({ pending: 6, ackPending: 3 });
+  });
+  test('does not report missing or partial consumer data as zero', () => {
+    expect(pendingDeliveries({})).toBeUndefined();
+    expect(
+      pendingDeliveries({ state: { consumer_count: 1 } })
+    ).toBeUndefined();
+    expect(
+      pendingDeliveries({
+        state: { consumer_count: 1 },
+        consumer_detail: [],
+      })
+    ).toBeUndefined();
+  });
+  test('reports zero for a stream known to have no consumers', () => {
+    expect(pendingDeliveries({ state: { consumer_count: 0 } })).toEqual(
+      {
+        pending: 0,
+        ackPending: 0,
+      }
+    );
+    expect(pendingDeliveries({ consumer_detail: [] })).toEqual({
+      pending: 0,
+      ackPending: 0,
+    });
+  });
+  test('distinguishes an idle consumer from delayed acknowledgments', () => {
+    expect(
+      pendingDeliveries({
+        consumer_detail: [{ num_pending: 0, num_ack_pending: 1 }],
+      })
+    ).toEqual({ pending: 0, ackPending: 1 });
+    expect(
+      pendingDeliveries({
+        consumer_detail: [{ num_pending: 0, num_ack_pending: 0 }],
+      })
+    ).toEqual({ pending: 0, ackPending: 0 });
+  });
+  test('rejects invalid or missing counters rather than showing misleading totals', () => {
+    expect(
+      pendingDeliveries({
+        consumer_detail: [{ num_pending: NaN, num_ack_pending: 0 }],
+      })
+    ).toBeUndefined();
+    expect(
+      pendingDeliveries({
+        consumer_detail: [{ num_pending: 0, num_ack_pending: -1 }],
+      })
+    ).toBeUndefined();
   });
 });

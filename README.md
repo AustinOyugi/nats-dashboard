@@ -371,3 +371,18 @@ npm run generateSW
 - [Heroicons](https://heroicons.com/): SVG Icons
 - [CNCF Artwork](https://github.com/cncf/artwork): NATS logo
 - [Workbox](https://developer.chrome.com/docs/workbox/): Service worker libraries and tooling
+
+### Pending consumer deliveries
+
+JetStream stream cards and stream info show **Pending** (not yet delivered) and
+**Ack Pending** (delivered but not acknowledged, including delayed retries).
+Expand **Per-consumer pending deliveries** on a card to see each consumer's counts.
+These totals count consumer deliveries, not unique messages: one message awaiting
+two consumers contributes twice. **Messages** remains the stream's retained count,
+which can include already processed messages depending on retention policy.
+
+Enable **Consumers** in the JetStream options, or select **Fetch Consumers** above
+the stream list. Missing or partial consumer details display **Unavailable** rather
+than a misleading zero. A stream explicitly reporting no consumers has zero pending
+consumer deliveries. Monitoring polling refreshes the counts; it does not replay or
+acknowledge messages. Consumer details add monitoring response size on busy servers.
