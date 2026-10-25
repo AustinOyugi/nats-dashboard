@@ -1,4 +1,4 @@
-import { Show } from 'solid-js';
+import { For, Show } from 'solid-js';
 
 import type { FormattedStreamDetail } from '~/lib/format';
 import { ListItem } from '~/components/dashboard/StackedList';
@@ -32,7 +32,7 @@ export default function StreamItem(props: StreamItemProps) {
                 props.onClick(props.stream.name);
               }}
             >
-              <span class="whitespace-nowrap">{props.stream.name}</span>
+              <span class="break-all">{props.stream.name}</span>
               <Show when={props.stream.cluster?.name}>
                 <span class="text-gray-500 dark:text-gray-400">/</span>
                 <span class="truncate">
@@ -44,6 +44,27 @@ export default function StreamItem(props: StreamItemProps) {
             </a>
           </h2>
         </div>
+
+        <Show when={props.stream.config?.subjects?.length}>
+          <ul
+            aria-label="Configured subjects"
+            class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs leading-5 text-gray-600 dark:text-gray-300"
+          >
+            <For each={props.stream.config?.subjects?.slice(0, 3)}>
+              {(subject) => (
+                <li>
+                  <code class="break-all">{subject}</code>
+                </li>
+              )}
+            </For>
+            <Show when={(props.stream.config?.subjects?.length ?? 0) > 3}>
+              <li class="text-gray-500 dark:text-gray-400">
+                +{(props.stream.config?.subjects?.length ?? 0) - 3} more in
+                stream details
+              </li>
+            </Show>
+          </ul>
+        </Show>
 
         <div class="mt-3 flex flex-col sm:flex-row flex-wrap sm:items-center gap-2 sm:gap-3 text-xs leading-5 text-gray-500 dark:text-gray-400">
           <Badge

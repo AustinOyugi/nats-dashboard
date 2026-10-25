@@ -56,6 +56,14 @@ Serving using Caddy server:
 docker run --rm -it -p 8000:80 -v ./dist:/usr/share/caddy caddy
 ```
 
+## JetStream Streams
+
+The JetStream stream list displays configured subjects beneath each stream name when the **Config** option is enabled. Up to three subjects are shown in each row; open the stream details to view the complete list.
+
+Use the filter field to search all stream names and configured subjects before pagination. Matching is case-insensitive and treats wildcard characters literally. With **Config** disabled, filtering still matches stream names.
+
+![JetStream stream subjects and filtering, shown with example data](docs/images/jetstream-subject-filter.png)
+
 ## Configuration
 
 The app uses a runtime JSON config file served at `/config.json`.

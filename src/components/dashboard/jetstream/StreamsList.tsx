@@ -4,6 +4,7 @@ import { useSettings } from '~/components/context/settings';
 import type { StreamDetail } from '~/types';
 import { formatStream } from '~/lib/format';
 import { paginate } from '~/lib/pagination';
+import { filterStreams } from '~/lib/streams';
 import Dropdown from '~/components/Dropdown';
 import Badge, { greenIfPositive } from '~/components/Badge';
 import {
@@ -46,29 +47,34 @@ export default function StreamsList(props: Props) {
     (props.streams.slice().sort(byCreationTime) ?? []).map(formatStream)
   );
 
-  const [currentPage, setCurrentPage] = createSignal(1);
+  const [search, setSearch] = createSignal('');
+  const filteredStreams = createMemo(() => filterStreams(streams(), search()));
+  const [requestedPage, setCurrentPage] = createSignal(1);
 
   const totalPages = createMemo(() =>
-    Math.ceil(streams().length / settings.jsz.pageSize)
+    Math.max(1, Math.ceil(filteredStreams().length / settings.jsz.pageSize))
   );
+  // Polling and page-size changes can remove the current page.
+  const currentPage = createMemo(() => Math.min(requestedPage(), totalPages()));
 
-  const next = () => setCurrentPage((p) => Math.min(p + 1, totalPages()));
-  const prev = () => setCurrentPage((p) => Math.max(p - 1, 1));
+  const next = () => setCurrentPage(Math.min(currentPage() + 1, totalPages()));
+  const prev = () => setCurrentPage(Math.max(currentPage() - 1, 1));
 
   const isFirstPage = () => currentPage() === 1;
   const isLastPage = () => currentPage() === totalPages();
 
   const pageStreams = createMemo(() =>
-    paginate(streams(), settings.jsz.pageSize, currentPage())
+    paginate(filteredStreams(), settings.jsz.pageSize, currentPage())
   );
 
   const [selectedName, setSelectedName] = createSignal<string>();
   const selectedStream = createMemo(() =>
-    pageStreams().find((s) => s.name === selectedName())
+    streams().find((s) => s.name === selectedName())
   );
 
   const numStreams = () => {
     const total = streams().length;
+    if (search().trim()) return `${filteredStreams().length} of ${total}`;
     const current = pageStreams().length;
 
     if (total > 0 && total !== current) {
@@ -86,7 +92,7 @@ export default function StreamsList(props: Props) {
             Streams
             <Badge
               type="pill"
-              color={greenIfPositive(streams().length)}
+              color={greenIfPositive(filteredStreams().length)}
               class="ml-3"
             >
               {numStreams()}
@@ -132,10 +138,46 @@ export default function StreamsList(props: Props) {
           </HeaderControls>
         </Header>
 
+        <div class="border-b border-gray-200 dark:border-white/5 px-4 py-4 sm:px-6 lg:px-8">
+          <label for="stream-search" class="sr-only">
+            Filter streams by name or subject
+          </label>
+          <input
+            id="stream-search"
+            type="search"
+            spellcheck={false}
+            placeholder="Filter by stream name or subject"
+            aria-describedby="stream-search-help"
+            class="block w-full rounded-md border-gray-300 text-sm text-gray-900 placeholder:text-gray-500 focus:border-sky-500 focus:ring-sky-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-gray-400"
+            value={search()}
+            onInput={(e) => {
+              setSearch(e.currentTarget.value);
+              setCurrentPage(1);
+            }}
+          />
+          <p
+            id="stream-search-help"
+            class="mt-2 text-xs text-gray-500 dark:text-gray-400"
+          >
+            <Show
+              when={settings.jsz.query.config}
+              fallback="Enable Config above to display and filter configured subjects."
+            >
+              Filter across all streams and their configured subjects.
+            </Show>
+          </p>
+        </div>
+
         <StackedList>
           <For
             each={pageStreams()}
-            fallback={<ListItem>No streams to display.</ListItem>}
+            fallback={
+              <ListItem>
+                {search().trim()
+                  ? 'No streams match your filter.'
+                  : 'No streams to display.'}
+              </ListItem>
+            }
           >
             {(stream) => (
               <StreamItem stream={stream} onClick={setSelectedName} />
